@@ -1,6 +1,8 @@
+import csv, os
 from django.db import models
 
 from .wunderground_client import WundergoundClient
+from wpe.settings import BASE_DIR
 
 
 # Create your models here.

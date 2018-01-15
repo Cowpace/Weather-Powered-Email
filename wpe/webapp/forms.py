@@ -1,8 +1,18 @@
 from django.forms import Form
 from django.forms.fields import EmailField, ChoiceField
-from django.forms.widgets import EmailInput, ChoiceWidget
+from django.forms.widgets import EmailInput
+
+from webapp.models import WeatherModel
 
 
 class MainForm(Form):
     email = EmailField(widget=EmailInput())
-    location = ChoiceField(choices=((1, 'Boston, MA'), (2, 'Orlando, FL')))
+    location = ChoiceField()
+
+    def __init__(self, *args, **kwargs):
+        super(MainForm, self).__init__(*args, **kwargs)
+        print(WeatherModel.objects.all())
+        self.fields['location'].choices = (
+            (index, '{}, {}'.format(model.city, model.state))
+            for index, model in enumerate(WeatherModel.objects.all())
+        )

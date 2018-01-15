@@ -4,7 +4,7 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from django.core.management.base import BaseCommand
 
-from ...models import EmailSignupModel, WeatherModel
+from webapp.models import EmailSignupModel, WeatherModel
 from wpe.settings import BASE_DIR, EMAIL_USER, EMAIL_PASSWORD
 
 
@@ -64,7 +64,7 @@ class Command(BaseCommand):
         models = EmailSignupModel.objects.all()
 
         cache_of_temps = {}
-        if not options.get('--flush-cache', None):
+        if options.get('--use-cache', None):
             cache_of_temps = self._load_weather_stats()
 
         for model in models:
@@ -90,4 +90,4 @@ class Command(BaseCommand):
         self._save_weather_stats(cache_of_temps)
 
     def add_arguments(self, parser):
-        parser.add_argument('--flush-cache', nargs='*', type=bool)
+        parser.add_argument('--use-cache', nargs='*', type=bool)
