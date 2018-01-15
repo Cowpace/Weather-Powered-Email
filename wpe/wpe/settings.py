@@ -21,6 +21,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'm8pafnck_4#di60i8se9ffemm!^&epzqgil*g#*4fpri7f$i6v'
+API_KEY = os.environ['API_KEY']
+EMAIL_USER = os.environ['EMAIL_USER']
+EMAIL_PASSWORD = os.environ['EMAIL_PASSWORD']
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
