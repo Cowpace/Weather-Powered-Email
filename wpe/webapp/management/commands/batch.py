@@ -9,7 +9,7 @@ from wpe.settings import BASE_DIR, EMAIL_USER, EMAIL_PASSWORD
 
 
 class Command(BaseCommand):
-    def _build_email(self, to_email, from_email, temp, temp_delta, city, state):
+    def _build_email(self, to_email, from_email, temp, weather, temp_delta, city, state):
         img_path = os.path.join(BASE_DIR, 'webapp/resources/')
 
         if temp_delta > 5:
@@ -22,7 +22,7 @@ class Command(BaseCommand):
             subject = "Enjoy a discount on us."
             attachment = os.path.join(img_path, 'average_weather.jpg')
 
-        body = 'It\'s {} degrees in {}, {}'.format(int(temp), city, state)
+        body = '{} degrees, {} in {}, {}'.format(int(temp), weather, city, state)
 
         msg = MIMEMultipart()
         msg["To"] = to_email
@@ -40,20 +40,23 @@ class Command(BaseCommand):
         return msg.as_string()
 
     def _save_weather_stats(self, tempuratures):
-        for (city, state), (past_temp, current_temp) in tempuratures.items():
-            WeatherModel.objects.update_or_create(
+        for (city, state), (past_temp, current_temp, current_weather) in tempuratures.items():
+            model = WeatherModel.objects.get(
                 city=city,
-                state=state,
-                current_tempurature=current_temp,
-                past_tempurature=past_temp
+                state=state
             )
+            model.current_weather = current_weather
+            model.past_tempurature = past_temp
+            model.current_tempurature = current_temp
+            model.save()
 
     def _load_weather_stats(self):
         models = WeatherModel.objects.all()
         result = {}
         for model in models:
             if model.current_weather and model.past_weather:
-                result[(model.city, model.state)] = model.past_weather, model.current_weather
+                item = model.past_tempurature, model.current_tempurature, model.current_weather
+                result[(model.city, model.state)] = item
         return result
 
     def handle(self, *args, **options):
@@ -69,9 +72,10 @@ class Command(BaseCommand):
 
         for model in models:
             if (model.city, model.state) not in cache_of_temps:
-                cache_of_temps[(model.city, model.state)] = model.get_past_temp(), model.get_current_temp()
+                current_temp, current_weather = model.get_current_weather()
+                cache_of_temps[(model.city, model.state)] = model.get_past_temp(), current_temp, current_weather
 
-            past_temp, current_temp = cache_of_temps[(model.city, model.state)]
+            past_temp, current_temp, current_weather = cache_of_temps[(model.city, model.state)]
             temp_delta = current_temp - past_temp
 
             sent_from = 'Weather Powered Email'
@@ -79,6 +83,7 @@ class Command(BaseCommand):
                 model.email,
                 sent_from,
                 current_temp,
+                current_weather,
                 temp_delta,
                 model.city,
                 model.state

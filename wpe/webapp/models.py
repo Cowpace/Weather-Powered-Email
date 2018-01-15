@@ -18,16 +18,13 @@ class EmailSignupModel(models.Model):
     def get_past_temp(self):
         return self._wunderground_client.get_last_year_temp(self.city, self.state)
 
-    def get_current_temp(self):
-        return self._wunderground_client.get_current_temp(self.city, self.state)
+    def get_current_weather(self):
+        return self._wunderground_client.get_current_weather(self.city, self.state)
 
 
 class WeatherModel(models.Model):
-    city = models.TextField()
+    city = models.TextField(primary_key=True)
     state = models.TextField()
     current_weather = models.TextField(null=True)
     current_tempurature = models.FloatField(null=True)
     past_tempurature = models.FloatField(null=True)
-
-    class Meta:
-        unique_together = (("city", "state"),)
