@@ -11,7 +11,6 @@ class MainForm(Form):
 
     def __init__(self, *args, **kwargs):
         super(MainForm, self).__init__(*args, **kwargs)
-        print(WeatherModel.objects.all())
         self.fields['location'].choices = (
             (index, '{}, {}'.format(model.city, model.state))
             for index, model in enumerate(WeatherModel.objects.all())

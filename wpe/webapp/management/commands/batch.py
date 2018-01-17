@@ -1,8 +1,11 @@
-import os, smtplib
+import smtplib, os
+from urllib import request
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
+
 from django.core.management.base import BaseCommand
+from giphypop import Giphy
 
 from webapp.models import EmailSignupModel, WeatherModel
 from wpe.settings import BASE_DIR, EMAIL_USER, EMAIL_PASSWORD
@@ -10,17 +13,13 @@ from wpe.settings import BASE_DIR, EMAIL_USER, EMAIL_PASSWORD
 
 class Command(BaseCommand):
     def _build_email(self, to_email, from_email, temp, weather, temp_delta, city, state):
-        img_path = os.path.join(BASE_DIR, 'webapp/resources/')
-
+        giphy = Giphy()
         if temp_delta > 5:
             subject = "It's nice out! Enjoy a discount on us."
-            attachment = os.path.join(img_path, 'good_weather.jpg')
         elif temp_delta < 5:
             subject = "Not so nice out? That's okay, enjoy a discount on us."
-            attachment = os.path.join(img_path, 'bad_weather.jpg')
         else:
             subject = "Enjoy a discount on us."
-            attachment = os.path.join(img_path, 'average_weather.jpg')
 
         body = '{} degrees, {} in {}, {}'.format(int(temp), weather, city, state)
 
@@ -29,13 +28,19 @@ class Command(BaseCommand):
         msg["From"] = from_email
         msg["Subject"] = subject
 
-        msgText = MIMEText('<b>%s</b><br><img src="cid:%s"><br>' % (body, attachment), 'html')
+        # stick weather at the end and hope giphy behaves
+        image = giphy.translate(phrase='{} weather'.format(weather))
+        image_dir = os.path.join(BASE_DIR, 'webapp/resources/image.gif')
+        request.urlretrieve(image.media_url, image_dir)
+
+        msgText = MIMEText('<b>%s</b><br><img src="cid:%s"><br>' % (body, image_dir), 'html')
         msg.attach(msgText)
 
-        fp = open(attachment, 'rb')
+        # Doing file io here isnt great, but im not sure how to get the html in the email to play nice
+        fp = open(image_dir, 'rb')
         img = MIMEImage(fp.read())
         fp.close()
-        img.add_header('Content-ID', '<{}>'.format(attachment))
+        img.add_header('Content-ID', '<{}>'.format(image_dir))
         msg.attach(img)
         return msg.as_string()
 
@@ -71,12 +76,19 @@ class Command(BaseCommand):
             cache_of_temps = self._load_weather_stats()
 
         for model in models:
+            # memoize the wunderground API calls
             if (model.city, model.state) not in cache_of_temps:
                 current_temp, current_weather = model.get_current_weather()
                 cache_of_temps[(model.city, model.state)] = model.get_past_temp(), current_temp, current_weather
 
             past_temp, current_temp, current_weather = cache_of_temps[(model.city, model.state)]
-            temp_delta = current_temp - past_temp
+            # make sure that the client returned a 200 response for both
+            if current_temp and past_temp:
+                # assume that last years temp is good enough for an average for this time of year
+                temp_delta = current_temp - past_temp
+            else:
+                # otherwise default to a normal email
+                temp_delta = 0
 
             sent_from = 'Weather Powered Email'
             message = self._build_email(

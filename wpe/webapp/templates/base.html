@@ -1,7 +1,22 @@
-<form action="" method="post">
+<table>
+  <tr><th>Weather Powered Email</th></tr>
+    <tr>
+    <form action="" method="post">
         {% csrf_token %}
         <table>
-                {{ form }}
+            <tr>
+                <td>
+                    {{ form }}
+                </td>
+            </tr>
         </table>
-        <input type="submit" value="Submit" />
-</form>
+        <input type="submit" value="Subscribe" />
+    </form>
+    {% if exists %}
+        <div>That user is already subscribed</div>
+    {% endif %}
+    {% if success %}
+        <div>Successfully subscribed to emails</div>
+    {% endif %}
+  </tr>
+</table>

@@ -6,9 +6,10 @@ from .models import EmailSignupModel
 
 
 def index(request):
+    exists = False
+    success = False
     if request.method == 'POST':
         form = MainForm(request.POST)
-
         if form.is_valid():
             email = form.cleaned_data['email']
 
@@ -22,7 +23,19 @@ def index(request):
             model = EmailSignupModel(email=email, city=city, state=state)
             if not EmailSignupModel.objects.filter(email=email):
                 model.save()
+                success = True
+                form = MainForm()
+            else:
+                exists = True
     else:
         form = MainForm()
-    print(EmailSignupModel.objects.all())
-    return render(request, 'base.html', {'form': form})
+
+    return render(
+        request,
+        'base.html',
+        {
+            'form': form,
+            'exists': exists,
+            'success': success
+        }
+    )

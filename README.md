@@ -1,6 +1,7 @@
 # Weather-Powered-Email
 
-A simple Django app that signs users up for emails related to the weather in their area.
+A simple Django app that signs users up for emails related to the weather in their area, and sends them giphys based on
+the current weather conditions.
 
 You can execute the batch emailing by running the django management command `batch`
 
