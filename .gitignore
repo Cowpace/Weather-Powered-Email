@@ -1,3 +1,5 @@
 venv/
 .idea/
 image.gif
+db.sqlite3
+migrations/
