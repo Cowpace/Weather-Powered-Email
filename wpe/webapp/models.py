@@ -5,8 +5,8 @@ from .wunderground_client import WundergoundClient
 from wpe.settings import BASE_DIR
 
 
-# Create your models here.
 class EmailSignupModel(models.Model):
+    """A model for the MainForm class"""
     email = models.EmailField(primary_key=True, unique=True)
     city = models.TextField()
     state = models.TextField()
@@ -23,6 +23,7 @@ class EmailSignupModel(models.Model):
 
 
 class WeatherModel(models.Model):
+    """A model for caching weather data on cities and states. Assumes every city is unique regardless of state"""
     city = models.TextField(primary_key=True)
     state = models.TextField()
     current_weather = models.TextField(null=True)

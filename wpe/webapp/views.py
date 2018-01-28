@@ -14,6 +14,7 @@ def index(request):
             email = form.cleaned_data['email']
 
             location_index = int(form.cleaned_data['location'])
+            # get the city and state from what index the user chose in the dropdown
             location = dict(form.fields['location'].choices)[location_index]
 
             city, state = location.split(',')
