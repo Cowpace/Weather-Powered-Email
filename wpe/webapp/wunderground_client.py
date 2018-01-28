@@ -11,7 +11,7 @@ class WundergoundClient(object):
     Side note: Some of the trickier city names like "Winston-Salem" and "North Las Vegas" seem to play nice with
         the API, and since I cant verify if a given city is supported per
         (https://apicommunity.wunderground.com/weatherapi/topics/list-of-cities-that-can-be-called-through-api)
-        im going to assume for simplicity that any city passed is valid
+        im going to assume for simplicity that any city passed is valid.
     """
     BASE_URL = 'http://api.wunderground.com/api/{api_key}/{route}/q/{state}/{city}.json'
 

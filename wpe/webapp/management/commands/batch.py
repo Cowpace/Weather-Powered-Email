@@ -5,13 +5,15 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 
 from django.core.management.base import BaseCommand
-from giphypop import Giphy
+from giphypop import Giphy, GiphyApiException
 
 from webapp.models import EmailSignupModel, WeatherModel
 from wpe.settings import BASE_DIR, EMAIL_USER, EMAIL_PASSWORD
 
 
 class Command(BaseCommand):
+    IMAGE_CACHE = {}
+
     def handle(self, *args, **options):
         """Loops through the records from the EmailSignupModel and sends a personalized email based on
         the weather from the same time one year ago, and includes a giphy of the current weather
@@ -51,6 +53,8 @@ class Command(BaseCommand):
                 model.city,
                 model.state
             )
+            # I looked into if this can be an async call (since this takes a while) but all the solutions pointed to
+            # using a queueing system (RabbitMQ) and having something else send the emails
             server.sendmail(sent_from, model.email, message)
 
         server.close()
@@ -76,7 +80,7 @@ class Command(BaseCommand):
         Returns:
             str: The email to send, as a string
         """
-        giphy = Giphy()
+        giphy = Giphy(strict=True)
         if temp_delta > 5:
             subject = "It's nice out! Enjoy a discount on us."
         elif temp_delta < 5:
@@ -91,20 +95,58 @@ class Command(BaseCommand):
         msg["From"] = from_email
         msg["Subject"] = subject
 
+        timeout = 0
         # stick weather at the end and hope giphy behaves
-        image = giphy.translate(phrase='{} weather'.format(weather))
-        image_dir = os.path.join(BASE_DIR, 'webapp/resources/image.gif')
-        request.urlretrieve(image.media_url, image_dir)
+        weather_phrase = '{} weather'.format(weather)
+        image = self.IMAGE_CACHE.get(weather_phrase)
+        seen_images = []
+        while not image and timeout < 10:
+            # guard against timeouts
+            try:
+                image = giphy.translate(phrase=weather_phrase)
+            except GiphyApiException:
+                timeout += 1
+                continue
 
-        msgText = MIMEText('<b>%s</b><br><img src="cid:%s"><br>' % (body, image_dir), 'html')
-        msg.attach(msgText)
+            # google doesnt let you send emails over 25 mb per
+            # https://support.google.com/mail/answer/6584?p=MaxSizeError&visit_id=1-636527772432135755-3720465967&rd=1#limit
+            # So keep trying until we do (within reason)
+            if image.filesize > 24000000:
+                timeout += 1
+                continue
 
-        # Doing file io here isnt great, but im not sure how to get the html in the email to play nice
-        fp = open(image_dir, 'rb')
-        img = MIMEImage(fp.read())
-        fp.close()
-        img.add_header('Content-ID', '<{}>'.format(image_dir))
-        msg.attach(img)
+            # dont use images we've seen and rejected before
+            if image.media_url in seen_images:
+                image = None
+                continue
+
+            # Automate the "QA" ;)
+            # Since the images are cached and there are only a few images for each weather status, this shouldnt
+            # be too tedious
+            if input('is this image {} for {} ok? ("yes" or "no")\n'.format(image.media_url, weather_phrase)) == 'yes':
+                break
+            else:
+                seen_images.append(image.media_url)
+                image = None
+
+        if image:
+            self.IMAGE_CACHE[weather_phrase] = image
+            image_dir = os.path.join(BASE_DIR, 'webapp/resources/image.gif')
+            request.urlretrieve(image.media_url, image_dir)
+
+            msgText = MIMEText('<b>%s</b><br><img src="cid:%s"><br>' % (body, image_dir), 'html')
+            msg.attach(msgText)
+
+            # Doing file io here isnt great, but im not sure how to get the html in the email to play nice
+            fp = open(image_dir, 'rb')
+            img = MIMEImage(fp.read())
+            fp.close()
+            img.add_header('Content-ID', '<{}>'.format(image_dir))
+            msg.attach(img)
+        else:
+            # log (print) that an image couldnt be found
+            print('image could not be found for {}'.format(weather_phrase))
+
         return msg.as_string()
 
     def _save_weather_stats(self, temperatures):

@@ -24,7 +24,7 @@ export EMAIL_USER={user};
 export EMAIL_PASSWORD={password};
 ```
 
-Now navigate `directory-where-you-git-cloned-the-repo/Weather-Powered-Email`
+Now navigate to `directory-where-you-git-cloned-the-repo/Weather-Powered-Email`
 
 first, assert you have python 3.6 on your machine, and then activate the virtual env
 
@@ -40,7 +40,11 @@ To send emails to subscribed users, from the `Weather-Powered-Email/wpe` directo
 
 `python manage.py batch`
 
-This should send emails per the spec in the challange doc to the subscribed users, with a Giphy of the current weather
+This should send emails per the spec in the challenge doc to the subscribed users, with a Giphy of the current weather.
+You should get an API warning from Giphy in the process, this is normal.
+
+you will be prompted per each weather condition ("sunny", "cloudy" etc) if a gif is OK to send (Giphy doesnt always behave)
+Type "yes" to send that gif or "no" to retry
 
 Built using:
 https://simplemaps.com/data/us-cities
