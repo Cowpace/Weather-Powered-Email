@@ -12,8 +12,6 @@ from wpe.settings import BASE_DIR, EMAIL_USER, EMAIL_PASSWORD
 
 
 class Command(BaseCommand):
-    IMAGE_CACHE = {}
-
     def handle(self, *args, **options):
         """Loops through the records from the EmailSignupModel and sends a personalized email based on
         the weather from the same time one year ago, and includes a giphy of the current weather
@@ -80,7 +78,6 @@ class Command(BaseCommand):
         Returns:
             str: The email to send, as a string
         """
-        giphy = Giphy(strict=True)
         if temp_delta > 5:
             subject = "It's nice out! Enjoy a discount on us."
         elif temp_delta < 5:
@@ -95,17 +92,54 @@ class Command(BaseCommand):
         msg["From"] = from_email
         msg["Subject"] = subject
 
-        timeout = 0
+        image = None
         # stick weather at the end and hope giphy behaves
         weather_phrase = '{} weather'.format(weather)
-        image = self.IMAGE_CACHE.get(weather_phrase)
+        image_dir = os.path.join(BASE_DIR, 'webapp/resources/{}.gif'.format(weather_phrase))
+        if os.path.isfile(image_dir):
+            image = open(image_dir, 'rb')
+        else:
+            url = self._get_giphy_image(weather_phrase)
+            if not url:
+                # log (print) that an image couldnt be found
+                print('image could not be found for {}'.format(weather_phrase))
+            else:
+                request.urlretrieve(url, image_dir)
+                image = open(image_dir, 'rb')
+
+        # Doing file io here isnt great, but im not sure how to get the html in the email to play nice
+        if image:
+            msgText = MIMEText('<b>%s</b><br><img src="cid:%s"><br>' % (body, image_dir), 'html')
+            msg.attach(msgText)
+
+            img = MIMEImage(image.read())
+            image.close()
+            img.add_header('Content-ID', '<{}>'.format(image_dir))
+            msg.attach(img)
+
+        return msg.as_string()
+
+    def _get_giphy_image(self, weather_phrase):
+        """gets a giphy image url given the weather phrase
+
+        Args:
+            weather_phrase (str): a string describing the current weather
+
+        Returns:
+            str: a url to the giphy image
+        """
+        image = None
+        timeout = 0
+        giphy = Giphy(strict=True)
         seen_images = []
         while not image and timeout < 10:
             # guard against timeouts
             try:
                 image = giphy.translate(phrase=weather_phrase)
-            except GiphyApiException:
+            except GiphyApiException as e:
+                print(e)
                 timeout += 1
+                image = None
                 continue
 
             # google doesnt let you send emails over 25 mb per
@@ -113,6 +147,7 @@ class Command(BaseCommand):
             # So keep trying until we do (within reason)
             if image.filesize > 24000000:
                 timeout += 1
+                image = None
                 continue
 
             # dont use images we've seen and rejected before
@@ -124,30 +159,10 @@ class Command(BaseCommand):
             # Since the images are cached and there are only a few images for each weather status, this shouldnt
             # be too tedious
             if input('is this image {} for {} ok? ("yes" or "no")\n'.format(image.media_url, weather_phrase)) == 'yes':
-                break
+                return image.media_url
             else:
                 seen_images.append(image.media_url)
                 image = None
-
-        if image:
-            self.IMAGE_CACHE[weather_phrase] = image
-            image_dir = os.path.join(BASE_DIR, 'webapp/resources/image.gif')
-            request.urlretrieve(image.media_url, image_dir)
-
-            msgText = MIMEText('<b>%s</b><br><img src="cid:%s"><br>' % (body, image_dir), 'html')
-            msg.attach(msgText)
-
-            # Doing file io here isnt great, but im not sure how to get the html in the email to play nice
-            fp = open(image_dir, 'rb')
-            img = MIMEImage(fp.read())
-            fp.close()
-            img.add_header('Content-ID', '<{}>'.format(image_dir))
-            msg.attach(img)
-        else:
-            # log (print) that an image couldnt be found
-            print('image could not be found for {}'.format(weather_phrase))
-
-        return msg.as_string()
 
     def _save_weather_stats(self, temperatures):
         """Saves temperature data for a given set of cities to the database so they can be used later if needed,

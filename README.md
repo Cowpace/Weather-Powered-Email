@@ -32,6 +32,8 @@ first, assert you have python 3.6 on your machine, and then activate the virtual
 
 Then you will need to populate the DB with cities and states. first `cd wpe` and then:
 
+`python manage.py makemigrations webapp`
+`python manage.py migrate`
 `python manage.py init_db`
 
 Now you can start the server using `python manage.py runserver` and input emails to subscribe them
@@ -43,8 +45,8 @@ To send emails to subscribed users, from the `Weather-Powered-Email/wpe` directo
 This should send emails per the spec in the challenge doc to the subscribed users, with a Giphy of the current weather.
 You should get an API warning from Giphy in the process, this is normal.
 
-you will be prompted per each weather condition ("sunny", "cloudy" etc) if a gif is OK to send (Giphy doesnt always behave)
-Type "yes" to send that gif or "no" to retry
+If a weather condition does not have a gif saved for it, you will be prompted per each weather condition
+("sunny", "cloudy" etc) if a gif is OK to send (Giphy doesnt always behave) Type "yes" to send that gif or "no" to retry
 
 Built using:
 https://simplemaps.com/data/us-cities

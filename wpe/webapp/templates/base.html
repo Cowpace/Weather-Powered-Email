@@ -13,10 +13,10 @@
         <input type="submit" value="Subscribe" />
     </form>
     {% if exists %}
-        <div>That user is already subscribed</div>
+        <div>{{ user }} is already subscribed</div>
     {% endif %}
     {% if success %}
-        <div>Successfully subscribed to emails</div>
+        <div>Successfully subscribed {{ user }} to emails</div>
     {% endif %}
   </tr>
 </div>

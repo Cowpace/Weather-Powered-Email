@@ -8,6 +8,7 @@ from .models import EmailSignupModel
 def index(request):
     exists = False
     success = False
+    email = None
     if request.method == 'POST':
         form = MainForm(request.POST)
         if form.is_valid():
@@ -37,6 +38,7 @@ def index(request):
         {
             'form': form,
             'exists': exists,
-            'success': success
+            'success': success,
+            'user': email
         }
     )
